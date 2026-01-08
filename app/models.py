@@ -8,4 +8,5 @@ class Employee(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, nullable=False)
+    userrole = Column(String ,nullable=False)
     date_joined = Column(Date, nullable=False)

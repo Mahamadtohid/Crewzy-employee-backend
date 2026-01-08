@@ -6,6 +6,7 @@ class EmployeeCreate(BaseModel):
     name: str
     email: str
     role: str
+    userrole:str
     date_joined: date
 
 
