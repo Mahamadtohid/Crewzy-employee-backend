@@ -13,6 +13,12 @@ class EmployeeResponse(EmployeeCreate):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+    
+class EmployeeOut(BaseModel):
+    id: int
+
+    class Config:
+        from_attributes = True
 
 
 class Token(BaseModel):

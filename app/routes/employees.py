@@ -1,23 +1,55 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy import or_
+from typing import List
+from ..schemas import EmployeeCreate, EmployeeResponse
+
 from ..database import get_db
 from ..models import Employee
-from ..schemas import EmployeeCreate, EmployeeResponse
+from ..schemas import EmployeeOut
 from ..auth import get_current_user
 
-router = APIRouter(prefix="/employees", tags=["Employees"])
+router = APIRouter(
+    prefix="/employees",
+    tags=["Employees"]
+)
 
-@router.get("/", response_model=List[EmployeeResponse])
-def get_employees(search: Optional[str] = None, db: Session = Depends(get_db)):
+@router.get("/")
+def get_employees(
+    search: str | None = Query(default=None),
+    filter_by: str = Query(default="all"),  # all | name | role
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, le=50),
+    db: Session = Depends(get_db),
+    user: str = Depends(get_current_user),
+):
     query = db.query(Employee)
-    if search:
-        query = query.filter(
-            (Employee.name.ilike(f"%{search}%")) |
-            (Employee.role.ilike(f"%{search}%"))
-        )
-    return query.all()
 
+    if search:
+        if filter_by == "name":
+            query = query.filter(Employee.name.ilike(f"%{search}%"))
+        elif filter_by == "role":
+            query = query.filter(Employee.role.ilike(f"%{search}%"))
+        else:  # all
+            query = query.filter(
+                or_(
+                    Employee.name.ilike(f"%{search}%"),
+                    Employee.role.ilike(f"%{search}%"),
+                )
+            )
+
+    total = query.count()
+
+    offset = (page - 1) * limit
+    employees = query.offset(offset).limit(limit).all()
+
+    return {
+        "data": employees,
+        "total": total,
+        "page": page,
+        "limit": limit,
+    }
+    
 @router.post("/", response_model=EmployeeResponse)
 def add_employee(
     employee: EmployeeCreate,
@@ -29,3 +61,4 @@ def add_employee(
     db.commit()
     db.refresh(new_employee)
     return new_employee
+
